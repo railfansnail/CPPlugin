@@ -1,6 +1,0 @@
-name: CPPlugin
-main: com.cheolpang.cpplugin.Main
-version: 1.0.0
-api-version: 1.21
-author: CheolPang
-commands: {}
