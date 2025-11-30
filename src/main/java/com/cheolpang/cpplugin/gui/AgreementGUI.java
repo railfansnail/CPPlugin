@@ -15,6 +15,7 @@ import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.components.CustomModelDataComponent;
 
 import java.util.Arrays;
 import java.util.List;
@@ -62,29 +63,33 @@ public class AgreementGUI implements Listener {
         filler.setItemMeta(fm);
         for (int i = 0; i < 27; i++) inv.setItem(i, filler);
 
-        ItemStack paper = new ItemStack(Material.PAPER);
-        ItemMeta pm = paper.getItemMeta();
+        ItemStack book = new ItemStack(Material.BOOK);
+        ItemMeta pm = book.getItemMeta();
         pm.setDisplayName(ChatColor.GOLD + "서버 규칙 (반드시 읽어주세요)");
         pm.setLore(RULE_LINES.stream().map(line -> ChatColor.WHITE + line).toList());
-        paper.setItemMeta(pm);
+        book.setItemMeta(pm);
 
-        inv.setItem(11, paper);
-        inv.setItem(13, paper);
-        inv.setItem(15, paper);
+        inv.setItem(13, book);
 
         ItemStack agree = new ItemStack(Material.LIME_CONCRETE);
         ItemMeta am = agree.getItemMeta();
         am.setDisplayName(ChatColor.GREEN + "동의합니다");
         am.setLore(List.of(ChatColor.GRAY + "서버 규칙을 읽고 동의합니다."));
+        CustomModelDataComponent compA = am.getCustomModelDataComponent(); // custom_model_data 구하기
+        compA.setStrings(List.of("agree")); // custom_model_data string에 agree 박기
+        am.setCustomModelDataComponent(compA); // custom_model_data 적용하기
         agree.setItemMeta(am);
-        inv.setItem(22, agree);
+        inv.setItem(11, agree);
 
         ItemStack deny = new ItemStack(Material.RED_CONCRETE);
         ItemMeta dm = deny.getItemMeta();
         dm.setDisplayName(ChatColor.RED + "동의하지 않습니다");
         dm.setLore(List.of(ChatColor.GRAY + "동의하지 않으면 접속이 불가합니다."));
+        CustomModelDataComponent compD = dm.getCustomModelDataComponent(); // custom_model_data 구하기
+        compD.setStrings(List.of("deny")); // custom_model_data string에 deny 박기
+        dm.setCustomModelDataComponent(compD); // custom_model_data 적용하기
         deny.setItemMeta(dm);
-        inv.setItem(26, deny);
+        inv.setItem(15, deny);
 
         player.openInventory(inv);
     }
@@ -102,10 +107,13 @@ public class AgreementGUI implements Listener {
         ItemStack clicked = e.getCurrentItem();
         if (clicked == null || !clicked.hasItemMeta()) return;
 
-        String name = clicked.getItemMeta().getDisplayName();
-        if (name == null) return;
+        ItemMeta meta = clicked.getItemMeta();
+        if (!meta.hasCustomModelDataComponent()) return;
 
-        if (name.contains("동의합니다")) {
+        CustomModelDataComponent cmd = meta.getCustomModelDataComponent();
+        List<String> strings = cmd.getStrings();
+
+        if (strings.contains("agree")) {
             // 동의 처리
             user.setAgreed(true);
             db.save(user);
@@ -120,7 +128,8 @@ public class AgreementGUI implements Listener {
             HandlerList.unregisterAll(this);
             p.closeInventory();
 
-        } else if (name.contains("동의하지")) {
+        } else if (strings.contains("deny")) {
+            // 거부 처리
             HandlerList.unregisterAll(this);
             p.kickPlayer("규칙에 동의하지 않았습니다.");
         }
@@ -136,7 +145,7 @@ public class AgreementGUI implements Listener {
         if (!user.hasAgreed()) {
             Bukkit.getScheduler().runTaskLater(Main.getInstance(), () -> {
                 if (p.isOnline() && !user.hasAgreed()) open();
-            }, 1L);
+            }, 5L);
         }
     }
 }
